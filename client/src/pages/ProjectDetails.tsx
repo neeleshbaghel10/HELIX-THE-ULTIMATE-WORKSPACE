@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 
 import { useProjects } from '../context/ProjectContext'
 import { useTasks } from '../context/TaskContext'
+import { useSprints } from '../context/SprintContext'
 
 import TaskModal from '../components/TaskModal'
 import DeleteTaskDialog from '../components/DeleteTaskDialog'
@@ -19,8 +20,11 @@ function ProjectDetails() {
     tasks,
     createTask,
     updateTask,
+    updateTaskStatus,
     deleteTask,
   } = useTasks()
+
+  const { sprints } = useSprints()
 
   const [isTaskModalOpen, setIsTaskModalOpen] =
     useState(false)
@@ -39,6 +43,9 @@ function ProjectDetails() {
 
   const [taskStatus, setTaskStatus] =
     useState<Task['status']>('Todo')
+
+  const [taskSprintId, setTaskSprintId] =
+    useState<number | null>(null)
 
   const [taskToDelete, setTaskToDelete] =
     useState<Task | null>(null)
@@ -74,6 +81,10 @@ function ProjectDetails() {
     (task) => task.projectId === project.id,
   )
 
+  const projectSprints = sprints.filter(
+    (sprint) => sprint.projectId === project.id,
+  )
+
   const completedTasks = projectTasks.filter(
     (task) => task.status === 'Done',
   )
@@ -84,6 +95,7 @@ function ProjectDetails() {
     setTaskDescription('')
     setTaskPriority('Medium')
     setTaskStatus('Todo')
+    setTaskSprintId(null)
     setIsTaskModalOpen(true)
   }
 
@@ -93,6 +105,7 @@ function ProjectDetails() {
     setTaskDescription(task.description)
     setTaskPriority(task.priority)
     setTaskStatus(task.status)
+    setTaskSprintId(task.sprintId)
     setIsTaskModalOpen(true)
   }
 
@@ -103,6 +116,7 @@ function ProjectDetails() {
     setTaskDescription('')
     setTaskPriority('Medium')
     setTaskStatus('Todo')
+    setTaskSprintId(null)
   }
 
   const handleTaskSubmit = (
@@ -117,6 +131,7 @@ function ProjectDetails() {
     if (editingTaskId !== null) {
       updateTask(
         editingTaskId,
+        taskSprintId,
         taskTitle.trim(),
         taskDescription.trim(),
         taskPriority,
@@ -125,6 +140,7 @@ function ProjectDetails() {
     } else {
       createTask(
         project.id,
+        taskSprintId,
         taskTitle.trim(),
         taskDescription.trim(),
         taskPriority,
@@ -142,6 +158,27 @@ function ProjectDetails() {
     deleteTask(taskToDelete.id)
 
     setTaskToDelete(null)
+  }
+
+  const handleStatusChange = (
+    taskId: number,
+    status: Task['status'],
+  ) => {
+    updateTaskStatus(taskId, status)
+  }
+
+  const getSprintName = (
+    sprintId: number | null,
+  ) => {
+    if (!sprintId) {
+      return 'No Sprint'
+    }
+
+    const sprint = sprints.find(
+      (sprint) => sprint.id === sprintId,
+    )
+
+    return sprint?.name ?? 'Unknown Sprint'
   }
 
   return (
@@ -210,11 +247,11 @@ function ProjectDetails() {
 
         <div className="rounded-lg border border-slate-800 bg-slate-900 p-5">
           <p className="text-sm text-slate-500">
-            Sprint
+            Sprints
           </p>
 
           <p className="mt-2 text-2xl font-semibold">
-            —
+            {projectSprints.length}
           </p>
         </div>
 
@@ -275,27 +312,51 @@ function ProjectDetails() {
                 {/* Task Header */}
                 <div className="flex items-start justify-between gap-4">
 
-                  <div>
+                  <div className="min-w-0">
+
                     <h3 className="font-medium text-white">
                       {task.title}
                     </h3>
 
-                    <p className="mt-1 text-sm leading-6 text-slate-500">
+                    <p className="mt-1 text-xs text-slate-600">
+                      {getSprintName(task.sprintId)}
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-slate-500">
                       {task.description}
                     </p>
+
                   </div>
 
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-1 text-xs ${
+                  {/* Status */}
+                  <select
+                    value={task.status}
+                    onChange={(event) =>
+                      handleStatusChange(
+                        task.id,
+                        event.target.value as Task['status'],
+                      )
+                    }
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs outline-none ${
                       task.status === 'Done'
-                        ? 'bg-emerald-950 text-emerald-400'
+                        ? 'border-emerald-900 bg-emerald-950 text-emerald-400'
                         : task.status === 'In Progress'
-                          ? 'bg-blue-950 text-blue-400'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'border-blue-900 bg-blue-950 text-blue-400'
+                          : 'border-slate-700 bg-slate-800 text-slate-400'
                     }`}
                   >
-                    {task.status}
-                  </span>
+                    <option value="Todo">
+                      Todo
+                    </option>
+
+                    <option value="In Progress">
+                      In Progress
+                    </option>
+
+                    <option value="Done">
+                      Done
+                    </option>
+                  </select>
 
                 </div>
 
@@ -354,18 +415,74 @@ function ProjectDetails() {
 
       </section>
 
-      {/* Other Workspace Sections */}
-      <section className="grid gap-4 md:grid-cols-3">
+      {/* Project Sprints */}
+      <section>
 
-        <div className="rounded-lg border border-slate-800 bg-slate-900 p-6">
-          <h2 className="font-medium">
+        <div>
+          <h2 className="text-lg font-medium">
             Sprints
           </h2>
 
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Plan and manage your development sprints.
+          <p className="mt-1 text-sm text-slate-500">
+            Development cycles for this project.
           </p>
         </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+
+          {projectSprints.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-800 bg-slate-900/50 p-6 text-center md:col-span-2">
+
+              <p className="text-sm text-slate-500">
+                No sprints have been created for this project.
+              </p>
+
+            </div>
+          ) : (
+            projectSprints.map((sprint) => (
+              <div
+                key={sprint.id}
+                className="rounded-lg border border-slate-800 bg-slate-900 p-5"
+              >
+
+                <div className="flex items-start justify-between gap-3">
+
+                  <h3 className="font-medium text-white">
+                    {sprint.name}
+                  </h3>
+
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs ${
+                      sprint.status === 'Completed'
+                        ? 'bg-emerald-950 text-emerald-400'
+                        : sprint.status === 'Active'
+                          ? 'bg-blue-950 text-blue-400'
+                          : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {sprint.status}
+                  </span>
+
+                </div>
+
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  {sprint.goal}
+                </p>
+
+                <p className="mt-4 text-xs text-slate-600">
+                  {sprint.startDate} → {sprint.endDate}
+                </p>
+
+              </div>
+            ))
+          )}
+
+        </div>
+
+      </section>
+
+      {/* Other Workspace Sections */}
+      <section className="grid gap-4 md:grid-cols-2">
 
         <div className="rounded-lg border border-slate-800 bg-slate-900 p-6">
           <h2 className="font-medium">
@@ -397,10 +514,13 @@ function ProjectDetails() {
         description={taskDescription}
         priority={taskPriority}
         status={taskStatus}
+        sprintId={taskSprintId}
+        sprints={projectSprints}
         onTitleChange={setTaskTitle}
         onDescriptionChange={setTaskDescription}
         onPriorityChange={setTaskPriority}
         onStatusChange={setTaskStatus}
+        onSprintChange={setTaskSprintId}
         onSubmit={handleTaskSubmit}
         onClose={handleCloseTaskModal}
       />

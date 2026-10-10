@@ -2,7 +2,7 @@ import { useState } from 'react'
 import ProjectCard from '../components/ProjectCard'
 import ProjectModal from '../components/ProjectModal'
 import DeleteProjectDialog from '../components/DeleteProjectDialog'
-import { useProjects } from '../context/ProjectContext'
+import { useProjects } from '../context/ProjectContext.tsx'
 import type { Project } from '../types/project'
 
 function Projects() {

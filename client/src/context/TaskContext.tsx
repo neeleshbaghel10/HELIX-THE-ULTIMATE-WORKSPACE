@@ -12,6 +12,7 @@ type TaskContextType = {
 
   createTask: (
     projectId: number,
+    sprintId: number | null,
     title: string,
     description: string,
     priority: Task['priority'],
@@ -19,10 +20,22 @@ type TaskContextType = {
 
   updateTask: (
     id: number,
+    sprintId: number | null,
     title: string,
     description: string,
     priority: Task['priority'],
     status: Task['status'],
+  ) => void
+
+  updateTaskStatus: (
+    id: number,
+    status: Task['status'],
+  ) => void
+
+  reorderTask: (
+    taskId: number,
+    newStatus: Task['status'],
+    overTaskId?: number,
   ) => void
 
   deleteTask: (id: number) => void
@@ -36,6 +49,7 @@ const initialTasks: Task[] = [
   {
     id: 1,
     projectId: 1,
+    sprintId: 1,
     title: 'Set up React frontend',
     description:
       'Create the initial React application structure.',
@@ -45,6 +59,7 @@ const initialTasks: Task[] = [
   {
     id: 2,
     projectId: 1,
+    sprintId: 1,
     title: 'Build project dashboard',
     description:
       'Create the main dashboard for HELIX projects.',
@@ -54,6 +69,7 @@ const initialTasks: Task[] = [
   {
     id: 3,
     projectId: 1,
+    sprintId: null,
     title: 'Design database schema',
     description:
       'Plan the database structure for projects and tasks.',
@@ -63,6 +79,7 @@ const initialTasks: Task[] = [
   {
     id: 4,
     projectId: 2,
+    sprintId: 3,
     title: 'Build hero section',
     description:
       'Create the main hero section for the portfolio.',
@@ -72,6 +89,7 @@ const initialTasks: Task[] = [
   {
     id: 5,
     projectId: 3,
+    sprintId: null,
     title: 'Design authentication',
     description:
       'Plan login and authentication functionality.',
@@ -92,6 +110,7 @@ export function TaskProvider({
 
   const createTask = (
     projectId: number,
+    sprintId: number | null,
     title: string,
     description: string,
     priority: Task['priority'],
@@ -99,6 +118,7 @@ export function TaskProvider({
     const newTask: Task = {
       id: Date.now(),
       projectId,
+      sprintId,
       title,
       description,
       status: 'Todo',
@@ -113,6 +133,7 @@ export function TaskProvider({
 
   const updateTask = (
     id: number,
+    sprintId: number | null,
     title: string,
     description: string,
     priority: Task['priority'],
@@ -123,6 +144,7 @@ export function TaskProvider({
         task.id === id
           ? {
               ...task,
+              sprintId,
               title,
               description,
               priority,
@@ -131,6 +153,71 @@ export function TaskProvider({
           : task,
       ),
     )
+  }
+
+  const updateTaskStatus = (
+    id: number,
+    status: Task['status'],
+  ) => {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              status,
+            }
+          : task,
+      ),
+    )
+  }
+
+  const reorderTask = (
+    taskId: number,
+    newStatus: Task['status'],
+    overTaskId?: number,
+  ) => {
+    setTasks((currentTasks) => {
+      const draggedTask = currentTasks.find(
+        (task) => task.id === taskId,
+      )
+
+      if (!draggedTask) {
+        return currentTasks
+      }
+
+      const remainingTasks = currentTasks.filter(
+        (task) => task.id !== taskId,
+      )
+
+      const updatedTask: Task = {
+        ...draggedTask,
+        status: newStatus,
+      }
+
+      if (overTaskId === undefined) {
+        return [
+          ...remainingTasks,
+          updatedTask,
+        ]
+      }
+
+      const overTaskIndex = remainingTasks.findIndex(
+        (task) => task.id === overTaskId,
+      )
+
+      if (overTaskIndex === -1) {
+        return [
+          ...remainingTasks,
+          updatedTask,
+        ]
+      }
+
+      return [
+        ...remainingTasks.slice(0, overTaskIndex),
+        updatedTask,
+        ...remainingTasks.slice(overTaskIndex),
+      ]
+    })
   }
 
   const deleteTask = (id: number) => {
@@ -147,6 +234,8 @@ export function TaskProvider({
         tasks,
         createTask,
         updateTask,
+        updateTaskStatus,
+        reorderTask,
         deleteTask,
       }}
     >

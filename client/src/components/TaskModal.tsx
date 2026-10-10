@@ -1,18 +1,24 @@
 import type { FormEvent } from 'react'
 import type { Task } from '../types/task'
+import type { Sprint } from '../types/sprint'
 
 type TaskModalProps = {
   isOpen: boolean
   editingTaskId: number | null
+
   title: string
   description: string
   priority: Task['priority']
   status: Task['status']
+  sprintId: number | null
+
+  sprints: Sprint[]
 
   onTitleChange: (value: string) => void
   onDescriptionChange: (value: string) => void
   onPriorityChange: (value: Task['priority']) => void
   onStatusChange: (value: Task['status']) => void
+  onSprintChange: (value: number | null) => void
 
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
@@ -28,10 +34,13 @@ function TaskModal({
   description,
   priority,
   status,
+  sprintId,
+  sprints,
   onTitleChange,
   onDescriptionChange,
   onPriorityChange,
   onStatusChange,
+  onSprintChange,
   onSubmit,
   onClose,
 }: TaskModalProps) {
@@ -118,6 +127,42 @@ function TaskModal({
               rows={4}
               className="mt-2 w-full resize-none rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 focus:border-slate-600"
             />
+          </div>
+
+          {/* Sprint */}
+          <div>
+            <label
+              htmlFor="task-sprint"
+              className="text-sm text-slate-300"
+            >
+              Sprint
+            </label>
+
+            <select
+              id="task-sprint"
+              value={sprintId ?? ''}
+              onChange={(event) =>
+                onSprintChange(
+                  event.target.value
+                    ? Number(event.target.value)
+                    : null,
+                )
+              }
+              className="mt-2 w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-slate-600"
+            >
+              <option value="">
+                No Sprint
+              </option>
+
+              {sprints.map((sprint) => (
+                <option
+                  key={sprint.id}
+                  value={sprint.id}
+                >
+                  {sprint.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Priority */}
